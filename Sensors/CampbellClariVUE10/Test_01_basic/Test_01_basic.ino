@@ -1,11 +1,8 @@
 /** =========================================================================
- * @file CampbellClariVUE10.ino
+ * @file Test_01_basic.ino.ino
  * @brief An example using only sensor functions and no logging.
  *
- * @author Sara Geleskie Damiano <sdamiano@stroudcenter.org>
- * @copyright (c) 2017-2022 Stroud Water Research Center (SWRC)
- *                          and the EnviroDIY Development Team
- *            This example is published under the BSD-3 license.
+ * @author Adolfo Lopez Miranda
  *
  * Build Environment: Visual Studios Code with PlatformIO
  * Hardware Platform: EnviroDIY Mayfly Arduino Datalogger
@@ -34,7 +31,7 @@
 // ==========================================================================
 /** Start [logging_options] */
 // The name of this program file
-const char* sketchName = "CampbellClariVUE10.ino";
+const char* sketchName = "Test_01_basic.ino";
 
 // Set the input and output pins for the logger
 // NOTE:  Use -1 for pins that do not apply
