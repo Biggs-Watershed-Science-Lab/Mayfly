@@ -30,88 +30,122 @@
 /** End [includes] */
 
 // ==========================================================================
-// Board setup info
+//  Data Logging Options
 // ==========================================================================
-/** Start [sketch_info] */
+/** Start [logging_options] */
 // The name of this program file
 const char* sketchName = "CampbellClariVUE10.ino";
+// Logger ID, also becomes the prefix for the name of the data file on SD card
+const char* LoggerID = "XXXXX";
+// How frequently (in minutes) to log data
+const uint8_t loggingInterval = 5;
+// Your logger's timezone.
+const int8_t timeZone = -5;  // Eastern Standard Time
+// NOTE:  Daylight savings time will not be applied!  Please use standard time!
 
+// Set the input and output pins for the logger
+// NOTE:  Use -1 for pins that do not apply
 const int32_t serialBaud = 115200;  // Baud rate for debugging
 const int8_t  greenLED   = 8;       // Pin for the green LED
 const int8_t  redLED     = 9;       // Pin for the red LED
-/** End [sketch_info] */
+const int8_t  buttonPin  = 21;      // Pin for debugging mode (ie, button pin)
+const int8_t  wakePin    = 31;  // MCU interrupt/alarm pin to wake from sleep
+// Mayfly 0.x D31 = A7
+// Set the wake pin to -1 if you do not want the main processor to sleep.
+// In a SAMD system where you are using the built-in rtc, set wakePin to 1
+const int8_t sdCardPwrPin   = -1;  // MCU SD card power pin
+const int8_t sdCardSSPin    = 12;  // SD card chip select/slave select pin
+const int8_t sensorPowerPin = 22;  // MCU pin controlling main sensor power
+/** End [logging_options] */
 
 
 // ==========================================================================
-// Set up the sensor object
+//  Using the Processor as a Sensor
 // ==========================================================================
-/** Start [sensor] */
+/** Start [processor_sensor] */
+#include <sensors/ProcessorStats.h>
+
+// Create the main processor chip "sensor" - for general metadata
+const char*    mcuBoardVersion = "v1.1";
+ProcessorStats mcuBoard(mcuBoardVersion);
+/** End [processor_sensor] */
+
+
+// ==========================================================================
+//  Maxim DS3231 RTC (Real Time Clock)
+// ==========================================================================
+/** Start [ds3231] */
+#include <sensors/MaximDS3231.h>  // Includes wrapper functions for Maxim DS3231 RTC
+
+// Create a DS3231 sensor object, using this constructor function:
+MaximDS3231 ds3231(1);
+/** End [ds3231] */
+
+
+// ==========================================================================
+//  Campbell ClariVUE Turbidity Sensor
+// ==========================================================================
+/** Start [clarivue10] */
 #include <sensors/CampbellClariVUE10.h>
 
+// NOTE: Use -1 for any pins that don't apply or aren't being used.
 const char* ClariVUESDI12address = "0";  // The SDI-12 Address of the ClariVUE10
-const int8_t ClariVUEPower = sensorPowerPin;  // Power pin (-1 if unconnected)
-const int8_t ClariVUEData  = 7;               // The SDI12 data pin
+const int8_t ClariVUEPower       = sensorPowerPin;  // Power pin
+const int8_t ClariVUEData        = 7;               // The SDI-12 data pin
 // NOTE:  you should NOT take more than one readings.  THe sensor already takes
 // and averages 8 by default.
 
 // Create a Campbell ClariVUE10 sensor object
-CampbellClariVUE10 clarivue(*ClariVUESDI12address, ClariVUEPower, ClariVUEData);
+CampbellClariVUE10 clarivue(ClariVUESDI12address, ClariVUEPower, ClariVUEData);
+/** End [clarivue] */
 
-// Create turbidity, temperature, and error variable pointers for the ClariVUE10
-Variable* clarivueTurbidity = new CampbellClariVUE10_Turbidity(
-    &clarivue, "b");
-Variable* clarivueTemp = new CampbellClariVUE10_Temp(
-    &clarivue, "");
-Variable* clarivueError = new CampbellClariVUE10_ErrorCode(
-    &clarivue, "");
 
-#include <sensors/MaxBotixSonar.h>
+// ==========================================================================
+//  Creating the Variable Array[s] and Filling with Variable Objects
+// ==========================================================================
+/** Start [variable_arrays] */
+Variable* variableList[] = {
+    new ProcessorStats_SampleNumber(&mcuBoard),
+    new ProcessorStats_FreeRam(&mcuBoard),
+    new ProcessorStats_Battery(&mcuBoard),
+    new MaximDS3231_Temp(&ds3231),
+    new CampbellClariVUE10_Turbidity(
+    &clarivue),
+    new CampbellClariVUE10_Temp(
+    &clarivue),
+    new CampbellClariVUE10_ErrorCode(
+    &clarivue)
+};
+// Count up the number of pointers in the array
+int variableCount = sizeof(variableList) / sizeof(variableList[0]);
 
-// Create a reference to the serial port for the sonar
-HardwareSerial& sonarSerial = Serial1;  // Use hardware serial if possible
+// Create the VariableArray object
+VariableArray varArray;
+/** End [variable_arrays] */
 
-const int8_t SonarPower   = 22;  // excite (power) pin
-const int    SonarTrigger = -1;  // Trigger pin
 
-// Create a new instance of the sonar sensor;
-MaxBotixSonar sonar(sonarSerial, SonarPower, SonarTrigger);
-
-// Create a new instance of the range variable;
-MaxBotixSonar_Range sonar_range(&sonar);
-/** End [sensor] */
-
-/* Start [calculated variables] */
-// Create a function to calculate the water depth from the sonar range
-// For this example, we'll assume that the sonar is mounted 5m above the stream
-// bottom
-float calcDepth(void) {
-    float mountHeight = 5000;
-    float sonarRange  = sonar_range.getValue();
-    return mountHeight - sonarRange;
-}
-// Create a calculated variable for the water depth
-// Variable calcVar(functionName, VariableName, VariableUnit, Resolution, UUID,
-// Code); VariableName must be a value from
-// http://vocabulary.odm2.org/variablename/ VariableUnit must be a value from
-// http://vocabulary.odm2.org/units/
-Variable waterDepth(calcDepth, 0, "waterDepth", "millimeter", "sonarDepth",
-                    "12345678-abcd-1234-ef00-1234567890ab");
-/** End [calculated_variables] */
+// ==========================================================================
+//  The Logger Object[s]
+// ==========================================================================
+/** Start [loggers] */
+// Create a logger instance
+Logger dataLogger;
+/** End [loggers] */
 
 
 // ==========================================================================
 //  Working Functions
 // ==========================================================================
 /** Start [working_functions] */
-// Flashes to Mayfly's LED's
-void greenredflash(int numFlash = 4) {
-    for (int i = 0; i < numFlash; i++) {
+// Flashes the LED's on the primary board
+void greenredflash(uint8_t numFlash = 4, uint8_t rate = 75) {
+    for (uint8_t i = 0; i < numFlash; i++) {
         digitalWrite(greenLED, HIGH);
         digitalWrite(redLED, LOW);
-        delay(75);
+        delay(rate);
         digitalWrite(greenLED, LOW);
         digitalWrite(redLED, HIGH);
-        delay(75);
+        delay(rate);
     }
     digitalWrite(redLED, LOW);
 }
@@ -128,25 +162,47 @@ void setup() {
 
     // Print a start-up note to the first serial port
     Serial.print(F("Now running "));
-    Serial.println(sketchName);
+    Serial.print(sketchName);
+    Serial.print(F(" on Logger "));
+    Serial.println(LoggerID);
+    Serial.println();
 
     Serial.print(F("Using ModularSensors Library version "));
     Serial.println(MODULAR_SENSORS_VERSION);
 
-    // Start the stream for the sonar
-    sonarSerial.begin(9600);
-
     // Set up pins for the LED's
     pinMode(greenLED, OUTPUT);
+    digitalWrite(greenLED, LOW);
     pinMode(redLED, OUTPUT);
+    digitalWrite(redLED, LOW);
     // Blink the LEDs to show the board is on and starting up
     greenredflash();
 
-    // Print a start-up note to the first serial port
-    Serial.println(F("Single Sensor Example - Sonar Ranging"));
+    // Set the timezones for the logger/data and the RTC
+    // Logging in the given time zone
+    Logger::setLoggerTimeZone(timeZone);
+    // It is STRONGLY RECOMMENDED that you set the RTC to be in UTC (UTC+0)
+    Logger::setRTCTimeZone(0);
 
-    // Set up the sensor
-    sonar.setup();
+    // Set information pins
+    dataLogger.setLoggerPins(wakePin, sdCardSSPin, sdCardPwrPin, buttonPin,
+                             greenLED);
+
+    // Begin the variable array[s], logger[s], and publisher[s]
+    varArray.begin(variableCount, variableList);
+    dataLogger.begin(LoggerID, loggingInterval, &varArray);
+
+    // Set up the sensors
+    Serial.println(F("Setting up sensors..."));
+    varArray.setupSensors();
+
+    // Create the log file, adding the default header to it
+    // Do this last so we have the best chance of getting the time correct and
+    // all sensor names correct
+    dataLogger.createLogFile(true);  // true = write a new header
+
+    // Call the processor sleep
+    dataLogger.systemSleep();
 }
 /** End [setup] */
 
@@ -156,34 +212,6 @@ void setup() {
 // ==========================================================================
 /** Start [loop] */
 void loop() {
-    // Turn on the LED to show we're taking a reading
-    digitalWrite(greenLED, HIGH);
-
-    // Send power to the sensor
-    sonar.powerUp();
-
-    // Wake up the sensor
-    sonar.wake();
-
-    // Update the sensor value
-    sonar.update();
-
-    // Print the sonar result
-    Serial.print("Current sonar range: ");
-    Serial.println(sonar_range.getValueString());
-    Serial.print("Calculated water depth: ");
-    Serial.println(waterDepth.getValueString());
-
-    // Put the sensor back to sleep
-    sonar.sleep();
-
-    // Cut the sensor power
-    sonar.powerDown();
-
-    // Turn off the LED to show we're done with the reading
-    digitalWrite(greenLED, LOW);
-
-    // Wait for the next reading
-    delay(5000);
+    dataLogger.logData();
 }
 /** End [loop] */
