@@ -46,6 +46,25 @@ const int8_t  redLED     = 9;       // Pin for the red LED
 // Set up the sensor object
 // ==========================================================================
 /** Start [sensor] */
+#include <sensors/CampbellClariVUE10.h>
+
+const char* ClariVUESDI12address = "0";  // The SDI-12 Address of the ClariVUE10
+const int8_t ClariVUEPower = sensorPowerPin;  // Power pin (-1 if unconnected)
+const int8_t ClariVUEData  = 7;               // The SDI12 data pin
+// NOTE:  you should NOT take more than one readings.  THe sensor already takes
+// and averages 8 by default.
+
+// Create a Campbell ClariVUE10 sensor object
+CampbellClariVUE10 clarivue(*ClariVUESDI12address, ClariVUEPower, ClariVUEData);
+
+// Create turbidity, temperature, and error variable pointers for the ClariVUE10
+Variable* clarivueTurbidity = new CampbellClariVUE10_Turbidity(
+    &clarivue, "b");
+Variable* clarivueTemp = new CampbellClariVUE10_Temp(
+    &clarivue, "");
+Variable* clarivueError = new CampbellClariVUE10_ErrorCode(
+    &clarivue, "");
+
 #include <sensors/MaxBotixSonar.h>
 
 // Create a reference to the serial port for the sonar
