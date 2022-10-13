@@ -1,5 +1,5 @@
 /** =========================================================================
- * @file Test_01_basic.ino.ino
+ * @file Test_01_basic.ino
  * @brief An example using only sensor functions and no logging.
  *
  * @author Adolfo Lopez Miranda
