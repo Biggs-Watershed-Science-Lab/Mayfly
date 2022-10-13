@@ -101,6 +101,6 @@ void loop() {
     // Wait for the wipe to finish
     Serial.println("Waiting for Wiper to finish");
     delay(10000); //wiper takes about 10 seconds
-    //Note: Wiper takes closer to 5-6 seconds to finsih when not submerged in water
+    // Note: Wiper takes closer to 5-6 seconds to finsih when not submerged in water
 }
 /** End [loop] */
