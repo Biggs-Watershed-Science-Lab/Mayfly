@@ -1,6 +1,7 @@
 /** =========================================================================
- * @file Test_01_basic.ino
- * @brief An example using only sensor functions and no logging.
+/** =========================================================================
+ * @file Test_03_logging.ino
+ * @brief A simple data logging example using ClariVUE10 turbidity sensor.
  *
  * @author Adolfo Lopez Miranda
  *
@@ -12,32 +13,47 @@
  * ======================================================================= */
 
 // ==========================================================================
-// Include the base required libraries
+//  Include the libraries required for any data logger
 // ==========================================================================
 /** Start [includes] */
 // The Arduino library is needed for every Arduino program.
 #include <Arduino.h>
 
 // EnableInterrupt is used by ModularSensors for external and pin change
-// interrupts and must be explicitely included in the main program.
+// interrupts and must be explicitly included in the main program.
 #include <EnableInterrupt.h>
 
 // Include the main header for ModularSensors
 #include <ModularSensors.h>
 /** End [includes] */
 
+
 // ==========================================================================
 //  Data Logging Options
 // ==========================================================================
 /** Start [logging_options] */
 // The name of this program file
-const char* sketchName = "Test_01_basic.ino";
+const char* sketchName = "Test_03_logging.ino";
+// Logger ID, also becomes the prefix for the name of the data file on SD card
+const char* LoggerID = "XXXXX";
+// How frequently (in minutes) to log data
+const uint8_t loggingInterval = 5;
+// Your logger's timezone.
+const int8_t timeZone = -8;  // Eastern Standard Time
+// NOTE:  Daylight savings time will not be applied!  Please use standard time!
 
 // Set the input and output pins for the logger
 // NOTE:  Use -1 for pins that do not apply
 const int32_t serialBaud = 115200;  // Baud rate for debugging
 const int8_t  greenLED   = 8;       // Pin for the green LED
 const int8_t  redLED     = 9;       // Pin for the red LED
+const int8_t  buttonPin  = 21;      // Pin for debugging mode (ie, button pin)
+const int8_t  wakePin    = 31;  // MCU interrupt/alarm pin to wake from sleep
+// Mayfly 0.x D31 = A7
+// Set the wake pin to -1 if you do not want the main processor to sleep.
+// In a SAMD system where you are using the built-in rtc, set wakePin to 1
+const int8_t sdCardPwrPin   = -1;  // MCU SD card power pin
+const int8_t sdCardSSPin    = 12;  // SD card chip select/slave select pin
 const int8_t sensorPowerPin = 22;  // MCU pin controlling main sensor power
 /** End [logging_options] */
 
@@ -52,6 +68,17 @@ const int8_t sensorPowerPin = 22;  // MCU pin controlling main sensor power
 const char*    mcuBoardVersion = "v1.1";
 ProcessorStats mcuBoard(mcuBoardVersion);
 /** End [processor_sensor] */
+
+
+// ==========================================================================
+//  Maxim DS3231 RTC (Real Time Clock)
+// ==========================================================================
+/** Start [ds3231] */
+#include <sensors/MaximDS3231.h>  // Includes wrapper functions for Maxim DS3231 RTC
+
+// Create a DS3231 sensor object, using this constructor function:
+MaximDS3231 ds3231(1);
+/** End [ds3231] */
 
 
 // ==========================================================================
@@ -79,7 +106,8 @@ CampbellClariVUE10 clarivue(*ClariVUESDI12address, ClariVUEPower, ClariVUEData);
 Variable* variableList[] = {
     new ProcessorStats_SampleNumber(&mcuBoard),
     new ProcessorStats_FreeRam(&mcuBoard),
-    new ProcessorStats_Battery(&mcuBoard),
+    new ProcessorStats_Battery(&mcuBoard), 
+    new MaximDS3231_Temp(&ds3231),
     new CampbellClariVUE10_Turbidity(&clarivue),
     new CampbellClariVUE10_Temp(&clarivue),
     new CampbellClariVUE10_ErrorCode(&clarivue)
@@ -130,23 +158,47 @@ void setup() {
 
     // Print a start-up note to the first serial port
     Serial.print(F("Now running "));
-    Serial.println(sketchName);
+    Serial.print(sketchName);
+    Serial.print(F(" on Logger "));
+    Serial.println(LoggerID);
+    Serial.println();
 
     Serial.print(F("Using ModularSensors Library version "));
     Serial.println(MODULAR_SENSORS_VERSION);
 
     // Set up pins for the LED's
     pinMode(greenLED, OUTPUT);
+    digitalWrite(greenLED, LOW);
     pinMode(redLED, OUTPUT);
+    digitalWrite(redLED, LOW);
     // Blink the LEDs to show the board is on and starting up
     greenredflash();
 
+    // Set the timezones for the logger/data and the RTC
+    // Logging in the given time zone
+    Logger::setLoggerTimeZone(timeZone);
+    // It is STRONGLY RECOMMENDED that you set the RTC to be in UTC (UTC+0)
+    Logger::setRTCTimeZone(0);
+
+    // Set information pins
+    dataLogger.setLoggerPins(wakePin, sdCardSSPin, sdCardPwrPin, buttonPin,
+                             greenLED);
+
     // Begin the variable array[s], logger[s], and publisher[s]
     varArray.begin(variableCount, variableList);
+    dataLogger.begin(LoggerID, loggingInterval, &varArray);
 
     // Set up the sensors
     Serial.println(F("Setting up sensors..."));
     varArray.setupSensors();
+
+    // Create the log file, adding the default header to it
+    // Do this last so we have the best chance of getting the time correct and
+    // all sensor names correct
+    dataLogger.createLogFile(true);  // true = write a new header
+
+    // Call the processor sleep
+    dataLogger.systemSleep();
 }
 /** End [setup] */
 
@@ -156,33 +208,6 @@ void setup() {
 // ==========================================================================
 /** Start [loop] */
 void loop() {
-    // Turn on the LED to show we're taking a reading
-    digitalWrite(greenLED, HIGH);
-
-    // Send power to the sensor
-    varArray.sensorsPowerUp();
-
-    // Wake up the sensor
-    varArray.sensorsWake();
-
-    // Update the sensor value
-    varArray.updateAllSensors();
-
-    // Print the sensor measurements
-    Serial.print("Current sensor measurements range: ");
-    varArray.printSensorData();
-
-
-    // Put the sensor back to sleep
-    varArray.sensorsSleep();
-
-    // Cut the sensor power
-    varArray.sensorsPowerDown();
-
-    // Turn off the LED to show we're done with the reading
-    digitalWrite(greenLED, LOW);
-
-    // Wait for the next reading
-    delay(5000);
+    dataLogger.logData();
 }
 /** End [loop] */

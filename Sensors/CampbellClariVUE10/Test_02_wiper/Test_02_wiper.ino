@@ -1,7 +1,10 @@
 /** =========================================================================
- * @file Test_01_basic.ino
- * @brief An example using only sensor functions and no logging.
- *
+ * @file Test_02_wiper.ino
+ * @brief An example using only using ClariVUE10 turbidity sensor and no logging.
+ *        This example is used to test the wiper function of the sensor.
+ *        The sensor is powered on and the wiper is activated for 10 seconds.
+ *        The sensor is then powered off.
+ *  
  * @author Adolfo Lopez Miranda
  *
  * Build Environment: Visual Studios Code with PlatformIO
@@ -31,7 +34,7 @@
 // ==========================================================================
 /** Start [logging_options] */
 // The name of this program file
-const char* sketchName = "Test_01_basic.ino";
+const char* sketchName = "Test_02_wiper.ino";
 
 // Set the input and output pins for the logger
 // NOTE:  Use -1 for pins that do not apply
@@ -39,6 +42,8 @@ const int32_t serialBaud = 115200;  // Baud rate for debugging
 const int8_t  greenLED   = 8;       // Pin for the green LED
 const int8_t  redLED     = 9;       // Pin for the red LED
 const int8_t sensorPowerPin = 22;  // MCU pin controlling main sensor power
+// Pins for wiper control module
+const int8_t wiperPin = 10; // The data pin on Mayfly grove
 /** End [logging_options] */
 
 
@@ -117,6 +122,29 @@ void greenredflash(uint8_t numFlash = 4, uint8_t rate = 75) {
     }
     digitalWrite(redLED, LOW);
 }
+
+// ZebraTech Hydro-Wiper turns on the wiper to clean the optical lens from the sensor
+void wiperController() {
+    // Turn on the LED to show we're turning on the wiper controller and take a reading
+    digitalWrite(greenLED, HIGH);
+
+    // Turn on the Wiper Controller on Hydro-Wiper
+    // Note ZebraTech Hydro-Wiper requires the control line to be set
+    // high to +5 volts for a minimum of 10ms
+    Serial.println("Turning on Wiper Controller");
+    digitalWrite(wiperPin, HIGH);
+    delay(100); // wait 100ms before turning off the control line.
+
+    // Turn off the Wiper Controller
+    Serial.println("Turning off Wiper Controller");
+    digitalWrite(wiperPin, LOW);
+
+    // Wait for the wipe to finish
+    Serial.println("Waiting for Wiper to finish");
+    delay(10000); //wiper takes about 10 seconds
+    digitalWrite(greenLED, LOW);
+    // Note: Wiper takes closer to 5-6 seconds to finsih when not submerged in water
+}
 /** End [working_functions] */
 
 
@@ -141,6 +169,9 @@ void setup() {
     // Blink the LEDs to show the board is on and starting up
     greenredflash();
 
+    // Set up pins for wiper control module 
+    pinMode(wiperPin, OUTPUT);
+
     // Begin the variable array[s], logger[s], and publisher[s]
     varArray.begin(variableCount, variableList);
 
@@ -156,6 +187,9 @@ void setup() {
 // ==========================================================================
 /** Start [loop] */
 void loop() {
+    // Turn on the LED and wipe the optical lens from the sensor
+    wiperController();
+
     // Turn on the LED to show we're taking a reading
     digitalWrite(greenLED, HIGH);
 
