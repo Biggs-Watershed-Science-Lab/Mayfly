@@ -1,5 +1,5 @@
 /** =========================================================================
- * @file Test_05_complete.ino
+ * @file Test_07_MMW_complete.ino
  * @brief Example logging data and publishing to Monitor My Watershed using ClariVUE10 Turbidity sensor.
  *
  * @author Adolfo Lopez Miranda
@@ -47,13 +47,13 @@
 // ==========================================================================
 /** Start [logging_options] */
 // The name of this program file
-const char* sketchName = "Test_05_complete";
+const char* sketchName = "Test_07_MMW_complete";
 // Logger ID, also becomes the prefix for the name of the data file on SD card
 const char* LoggerID = "XXXXX";
 // How frequently (in minutes) to log data
 const uint8_t loggingInterval = 5;
 // Your logger's timezone.
-const int8_t timeZone = -8;  // Eastern Standard Time
+const int8_t timeZone = 0;  // Eastern Standard Time
 // NOTE:  Daylight savings time will not be applied!  Please use standard time!
 
 // Set the input and output pins for the logger
