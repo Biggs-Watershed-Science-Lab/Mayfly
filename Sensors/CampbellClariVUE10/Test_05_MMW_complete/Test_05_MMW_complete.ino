@@ -49,9 +49,9 @@
 // The name of this program file
 const char* sketchName = "Test_05_MMW_complete";
 // Logger ID, also becomes the prefix for the name of the data file on SD card
-const char* LoggerID = "XXXXX";
+const char* LoggerID = "25678";
 // How frequently (in minutes) to log data
-const uint8_t loggingInterval = 5;
+const uint8_t loggingInterval = 1;
 // Your logger's timezone.
 const int8_t timeZone = 0;  // Eastern Standard Time
 // NOTE:  Daylight savings time will not be applied!  Please use standard time!
