@@ -1,1 +1,2 @@
 # Mayfly
+The EnviroDIY Mayfly Data Logger is a powerful, user-programmable microprocessor board that is fully compatible with the Arduino IDE software. The Mayfly Data logger will be used in a variety of tests and deployements at the Biggs Watershed Science Lab. The code within this repository was developed with the ModularSensors library, and made to work with sensors like the Campbell Scientific ClariVUE10.
