@@ -183,6 +183,6 @@ void loop() {
     digitalWrite(greenLED, LOW);
 
     // Wait for the next reading
-    delay(5000);
+    delay(10000);
 }
 /** End [loop] */
